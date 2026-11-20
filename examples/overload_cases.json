@@ -1,0 +1,41 @@
+{
+  "shift": {
+    "shift_id": "day",
+    "probe_id": "dust-1",
+    "capacity": 2,
+    "multiplier": "1/2",
+    "offset": 1,
+    "limit": 3
+  },
+  "tail_overrun": {
+    "completed_counts": [4, 5, 6, 7],
+    "active_count": 8,
+    "first_rows": [
+      {"pulse": 1, "raw_count": 4, "concentration": "3", "exceeded": false},
+      {"pulse": 2, "raw_count": 5, "concentration": "7/2", "exceeded": true},
+      {"pulse": 3, "missing": "overrun"},
+      {"pulse": 4, "missing": "overrun"}
+    ],
+    "retry_rows": [
+      {"pulse": 1, "raw_count": 4, "concentration": "3", "exceeded": false},
+      {"pulse": 2, "raw_count": 5, "concentration": "7/2", "exceeded": true},
+      {"pulse": 3, "missing": "overrun"},
+      {"pulse": 4, "missing": "overrun"},
+      {"pulse": 5, "missing": "overrun"}
+    ],
+    "next_count": 9,
+    "next_rows": [
+      {"pulse": 6, "raw_count": 9, "concentration": "11/2", "exceeded": true}
+    ]
+  },
+  "retained_during_commit": {
+    "completed_counts": [4],
+    "active_count": 5,
+    "first_rows": [
+      {"pulse": 1, "raw_count": 4, "concentration": "3", "exceeded": false}
+    ],
+    "next_rows": [
+      {"pulse": 2, "raw_count": 5, "concentration": "7/2", "exceeded": true}
+    ]
+  }
+}
