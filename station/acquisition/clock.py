@@ -29,12 +29,17 @@ class PulseClock:
         self._shift_id = shift_id
         self._probe_id = probe_id
         self._last_pulse = 0
+        self._last_completed = 0
         self._active: PulseToken | None = None
         self._sealed = False
 
     @property
     def last_pulse(self) -> int:
         return self._last_pulse
+
+    @property
+    def last_completed(self) -> int:
+        return self._last_completed
 
     def require_open(self) -> None:
         if self._sealed:
@@ -61,6 +66,7 @@ class PulseClock:
     def complete(self, token: PulseToken) -> None:
         self.require_active(token)
         self._active = None
+        self._last_completed = token.pulse
 
     def seal(self) -> int:
         self.require_open()

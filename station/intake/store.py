@@ -21,6 +21,11 @@ _SCHEMA = (
         shift_id TEXT NOT NULL PRIMARY KEY REFERENCES shifts(shift_id),
         last_pulse TEXT NOT NULL
     )''',
+    '''CREATE TABLE IF NOT EXISTS shift_modes (
+        shift_id TEXT NOT NULL PRIMARY KEY REFERENCES shifts(shift_id),
+        mode TEXT NOT NULL CHECK (mode IN ('capture', 'overrun')),
+        capacity TEXT NOT NULL
+    )''',
     '''CREATE TABLE IF NOT EXISTS accepted_readings (
         receipt_id INTEGER PRIMARY KEY,
         shift_id TEXT NOT NULL REFERENCES shifts(shift_id),
@@ -49,6 +54,34 @@ _SCHEMA = (
         UNIQUE (report_id, source_shift_id, source_pulse),
         FOREIGN KEY (source_shift_id, source_pulse)
             REFERENCES accepted_readings(shift_id, pulse)
+    )''',
+    '''CREATE TABLE IF NOT EXISTS delivery_cursors (
+        shift_id TEXT NOT NULL PRIMARY KEY REFERENCES shifts(shift_id),
+        delivered_pulse TEXT NOT NULL
+    )''',
+    '''CREATE TABLE IF NOT EXISTS delivery_batches (
+        batch_id INTEGER PRIMARY KEY,
+        shift_id TEXT NOT NULL REFERENCES shifts(shift_id),
+        probe_id TEXT NOT NULL,
+        first_pulse TEXT NOT NULL,
+        last_pulse TEXT NOT NULL,
+        UNIQUE (shift_id, first_pulse)
+    )''',
+    '''CREATE TABLE IF NOT EXISTS delivery_rows (
+        batch_id INTEGER NOT NULL REFERENCES delivery_batches(batch_id),
+        pulse TEXT NOT NULL,
+        raw_count TEXT,
+        concentration_num TEXT,
+        concentration_den TEXT,
+        exceeded INTEGER CHECK (exceeded IN (0, 1)),
+        missing TEXT,
+        PRIMARY KEY (batch_id, pulse),
+        CHECK ((missing = 'overrun' AND raw_count IS NULL
+                AND concentration_num IS NULL AND concentration_den IS NULL
+                AND exceeded IS NULL)
+            OR (missing IS NULL AND raw_count IS NOT NULL
+                AND concentration_num IS NOT NULL AND concentration_den IS NOT NULL
+                AND exceeded IS NOT NULL))
     )''',
 )
 

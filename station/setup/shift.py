@@ -41,34 +41,48 @@ class ShiftRegistry:
         multiplier: RationalInput,
         offset: RationalInput,
         limit: RationalInput,
+        *,
+        connection: sqlite3.Connection | None = None,
     ) -> Shift:
         if not isinstance(shift_id, str) or not shift_id.strip():
             raise ValueError('shift_id must be a nonblank string')
         probe = ProbeIdentity(probe_id)
         calibration = Calibration(parse_rational(multiplier), parse_rational(offset))
         threshold = ThresholdRule(parse_rational(limit))
-        with self._store.transaction('open') as connection:
-            previous = self._find(connection, shift_id)
-            if previous is not None:
-                if (previous.probe, previous.calibration, previous.threshold) != (
-                    probe, calibration, threshold
-                ):
-                    raise ShiftConflictError(shift_id)
-                return previous
-            connection.execute(
-                '''INSERT INTO shifts
-                   (shift_id, probe_id, multiplier_num, multiplier_den,
-                    offset_num, offset_den, limit_num, limit_den)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                (
-                    shift_id,
-                    probe.probe_id,
-                    *encode_fraction(calibration.multiplier),
-                    *encode_fraction(calibration.offset),
-                    *encode_fraction(threshold.limit),
-                ),
-            )
-            return Shift(shift_id, probe, calibration, threshold)
+        if connection is not None:
+            return self._open(connection, shift_id, probe, calibration, threshold)
+        with self._store.transaction('open') as opened:
+            return self._open(opened, shift_id, probe, calibration, threshold)
+
+    def _open(
+        self,
+        connection: sqlite3.Connection,
+        shift_id: str,
+        probe: ProbeIdentity,
+        calibration: Calibration,
+        threshold: ThresholdRule,
+    ) -> Shift:
+        previous = self._find(connection, shift_id)
+        if previous is not None:
+            if (previous.probe, previous.calibration, previous.threshold) != (
+                probe, calibration, threshold
+            ):
+                raise ShiftConflictError(shift_id)
+            return previous
+        connection.execute(
+            '''INSERT INTO shifts
+               (shift_id, probe_id, multiplier_num, multiplier_den,
+                offset_num, offset_den, limit_num, limit_den)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+            (
+                shift_id,
+                probe.probe_id,
+                *encode_fraction(calibration.multiplier),
+                *encode_fraction(calibration.offset),
+                *encode_fraction(threshold.limit),
+            ),
+        )
+        return Shift(shift_id, probe, calibration, threshold)
 
     def get(self, shift_id: str, *, connection: sqlite3.Connection | None = None) -> Shift:
         if connection is None:

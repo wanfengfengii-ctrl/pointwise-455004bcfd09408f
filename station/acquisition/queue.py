@@ -30,6 +30,9 @@ class PendingQueue:
     def get(self, pulse: int) -> RawReading | None:
         return self._slots.get(pulse)
 
+    def readings(self) -> tuple[RawReading, ...]:
+        return tuple(self._slots[pulse] for pulse in sorted(self._slots))
+
     def release(self, reading: RawReading) -> bool:
         if self._slots.get(reading.pulse) != reading:
             return False

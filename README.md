@@ -14,6 +14,17 @@
 8. 夜班只需重开站库，即可用 `ReportLookup(store).read(report_id)` 领取固定报告及原据。
 9. 领取操作对原读逐拍复算，并核对固定成员、逐拍判级和班汇总。结果含原计数、班次定标口径、接管回执号和复算值。查无号报 `UnknownReportError`，已签报告原据不整合报 `InconsistentEvidenceError`。
 
+## 不停采班（站库写入暂缓）
+
+站库写入暂缓时，可让探头继续逐拍回值，由值班交付方整批接管。详见 `OVERLOAD.md`。
+
+1. `AcquisitionBridge.open(..., overrun=True)` 开不停采班。槽容量、模式和定标口径在开班时固定，异参报 `ShiftConflictError`。
+2. `session.start()` 在满槽时也允许起拍，拍号从 1 连续推进，同时最多一拍在读。
+3. `session.finish(token, count)` 有槽时保全原读并返回 `RawReading`，满槽时结束该拍并返回 `None`；既有原读继续占槽。起拍和回值都不等站库提交。
+4. `ReadingDispatch.deliver_prefix(session)` 从上次正式交付位置的下一拍起，交付到取证时点最后完结的一拍。没有新完结拍返回 `None`；尾部缺测照常交付；在读拍留给后续批次。批次号、逐拍结果和交付位置在单个事务中提交，成功后才释放本批原读槽。提交失败则批次与位置均不可见，原读和进度保留，可重新取证续办。
+5. `AdmissionService.read_prefix(shift_id)` 按拍序返回全班已交付结果，`read_batch(batch_id)` 按批次号返回固定批次；两者只读已提交数据，重开站库后照常领取。未知班报 `UnknownShiftError`，未知批次报 `LookupError`。
+6. 普通班仍用 `deliver` 逐拍送交和 `session.confirm(receipt)` 确认；不停采班拒绝逐件送交，逐件确认也不会释放其槽。
+
 ## 运行
 
 使用 Python 3.11 和标准库。从项目根目录运行。平台物化时提供 `check_project.py`，该入口运行完整 `tests` 套件。
@@ -21,9 +32,11 @@
 ```text
 python3 -B check_project.py
 python3 -B -m examples.day_shift
+python3 -B -m examples.overload_day
 ```
 
 示例使用独立临时站库。容量为 1，输入计数 4 和 5，倍率 1/2、偏移 1、限值 3。第一拍等于限值，第二拍超限。断源领取的合计为 13/2 μg/m³。
+`examples.overload_day` 演示不停采班：首批提交被拒后原读仍占槽，满槽回值记为过缺，续办后按批次领取，断源重开再按班和批次领取。
 
 ## 站库与会话
 
